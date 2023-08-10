@@ -1,0 +1,73 @@
+﻿﻿<div>
+    <SfSidebar Created="@(() => OnSidebarCreate?.Invoke())"
+    @bind-IsOpen="SidebarToggle"
+               class="sidebar-treeview"
+               Width="290px"
+               Target=".main-content"
+               MediaQuery="(min-width:600px)">
+        <ChildContent>
+            <div class="main-menu">
+                <div>
+                    <SfTreeView CssClass="main-treeview" ExpandOn="@ExpandAction.Click" TValue="TreeData">
+                        <TreeViewFieldsSettings Id="NodeId" Text="NodeText" IconCss="IconCss" DataSource="Treedata" HasChildren="HasChild" ParentID="Pid" />
+                    </SfTreeView>
+                </div>
+            </div>
+        </ChildContent>
+    </SfSidebar>
+    <div>
+        <SfToolbar>
+            <ToolbarEvents Clicked="@Toggle" />
+            <ToolbarItems>
+                <ToolbarItem Id="MenuIcon" PrefixIcon="fa-solid fa-bars" TooltipText="Menu"></ToolbarItem>
+                <ToolbarItem>
+                    <Template>
+                        <div>
+                            <div>AirPlanner</div>
+                            <AccessControl />
+                        </div>
+                    </Template>
+                </ToolbarItem>
+            </ToolbarItems>
+        </SfToolbar>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public System.Action? OnSidebarCreate { get; set; }
+
+    // Specify the value of Sidebar component state. It indicates whether the sidebar component is in an open/close state.
+    public bool SidebarToggle = false;
+
+    // Specifies the event handler for Clicked event in Toolbar component.
+    public void Toggle(ClickEventArgs args)
+    {
+        if (args.Item.Id == "MenuIcon")
+        {
+            SidebarToggle = !SidebarToggle;
+        }
+    }
+    public class TreeData
+    {
+        public string NodeId { get; set; } = string.Empty;
+        public string NodeText { get; set; } = string.Empty;
+        public string IconCss { get; set; } = string.Empty;
+        public string? Pid { get; set; }
+        public bool HasChild { get; set; }
+    }
+    private List<TreeData> Treedata = new List<TreeData>();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Treedata.Add(new TreeData { NodeId = "01", NodeText = "Agendamentos", IconCss = "fa-solid fa-calendar-days" });
+        Treedata.Add(new TreeData { NodeId = "02", NodeText = "Revisão", IconCss = "fa-solid fa-clipboard-list" });
+        Treedata.Add(new TreeData { NodeId = "03", NodeText = "Relatórios", IconCss = "fa-solid fa-chart-line" });
+        Treedata.Add(new TreeData { NodeId = "04", NodeText = "Admin", IconCss = "fa-solid fa-user-gear", HasChild = true });
+        Treedata.Add(new TreeData { NodeId = "04-01", NodeText = "Usuários", IconCss = "fa-solid fa-user-gear", Pid = "04" });
+        Treedata.Add(new TreeData { NodeId = "04-02", NodeText = "Centros de Custo", IconCss = "fa-solid fa-money-bill-transfer", Pid = "04" });
+        Treedata.Add(new TreeData { NodeId = "04-03", NodeText = "Aeronaves", IconCss = "fa-solid fa-plane", Pid = "04" });
+        Treedata.Add(new TreeData { NodeId = "04-04", NodeText = "Configurações", IconCss = "fa-solid fa-toolbox", Pid = "04" });
+    }
+}

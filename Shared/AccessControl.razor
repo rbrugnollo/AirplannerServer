@@ -1,0 +1,26 @@
+﻿<AuthorizeView>
+    <Authorized>
+        <h1>Welcome, @Username!</h1>
+        <a href="auth/logout">Log out</a>
+    </Authorized>
+    <NotAuthorized>
+        <a href="auth/login?redirectUri=/">Log in</a>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code {
+    private string Username = "Anonymous User";
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationState is not null)
+        {
+            var state = await authenticationState;
+            Username = state?.User?.Identity?.Name ?? string.Empty;
+        }
+        await base.OnInitializedAsync();
+    }
+}

@@ -1,0 +1,83 @@
+<Project>
+  <ItemGroup>
+    <AvailableItemName Include="TailwindNpm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="StaticAssets/*" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <Target Name="CheckIfNodeJSIsInstalled">
+    <PropertyGroup>
+      <NodeTestCommand Condition="$(OS) == Windows_NT">node -v &gt; NUL</NodeTestCommand>
+      <NodeTestCommand Condition="$(OS) != Windows_NT">node -v &gt; /dev/null</NodeTestCommand>
+    </PropertyGroup>
+
+    <Exec Command="$(NodeTestCommand)" IgnoreExitCode="true" EchoOff="true">
+      <Output TaskParameter="ExitCode" PropertyName="ExitCode" />
+    </Exec>
+
+    <Error Text="Node.js is required to build and run this project. To continue, please install Node.js from https://nodejs.org/, and then restart your command prompt or IDE." Condition="$(ExitCode) != 0" />
+  </Target>
+
+  <Target Name="NpmInstall" DependsOnTargets="CheckIfNodeJSIsInstalled" Condition="!Exists('$(MSBuildThisFileDirectory)package-lock.json')">
+    <!-- If package-lock.json does not exists, perform an NPM install -->
+    <Message Importance="high" Text="Restoring dependencies using 'npm'. This may take several minutes..." />
+    <Exec Command="npm i" WorkingDirectory="$(MSBuildThisFileDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)package-lock.json" DestinationFolder="$(BaseIntermediateOutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="NodeModulesInstall" DependsOnTargets="NpmInstall" Condition="!Exists('$(MSBuildThisFileDirectory)node_modules')">
+    <!-- If node_modules does not exists, perform an NPM clean install -->
+    <Message Importance="high" Text="Restoring node_modules using 'npm'. This may take several minutes..." />
+    <Exec Command="npm ci --also=dev" WorkingDirectory="$(MSBuildThisFileDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)package-lock.json" DestinationFolder="$(BaseIntermediateOutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="NpmCleanInstall" DependsOnTargets="NodeModulesInstall" Inputs="$(MSBuildThisFileDirectory)package-lock.json" Outputs="$(BaseIntermediateOutputPath)package-lock.json">
+    <!-- If package-lock.json has changed, perform an NPM clean install -->
+    <Message Importance="high" Text="Restoring dependencies using 'npm'. This may take several minutes..." />
+    <Exec Command="npm ci --also=dev" WorkingDirectory="$(MSBuildThisFileDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)package-lock.json" DestinationFolder="$(BaseIntermediateOutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="ProcessScopedCssFiles" AfterTargets="_GenerateScopedCssFiles">
+    <MSBuild Projects="$(MSBuildProjectFile)"
+             Properties="CurrentScopedCssFile=%(_ScopedCssOutputs.Identity)"
+             Targets="PostScopedCssCompile">
+    </MSBuild>
+  </Target>
+
+  <Target Name="PostScopedCssCompile" AfterTargets="ProcessScopedCssFiles" DependsOnTargets="NpmCleanInstall" Condition="$(CurrentScopedCssFile) != ''">
+    <Message Importance="high" Text="Building scoped css..." />
+
+    <Exec Command="npx --no-install tailwindcss -i $(CurrentScopedCssFile) -o $(CurrentScopedCssFile) -c ./tailwind.config.js"
+          IgnoreExitCode="true"
+          EchoOff="true"
+          WorkingDirectory="$(MSBuildThisFileDirectory)">
+      <Output TaskParameter="ExitCode" PropertyName="ExitCode" />
+    </Exec>
+
+    <Error Text="Error via build scoped css" Condition="$(ExitCode) != 0" />
+  </Target>
+
+  <Target Name="BuildCss" BeforeTargets="CoreBuild" DependsOnTargets="PostScopedCssCompile" Outputs="$(MSBuildProjectDirectory)/wwwroot/css/styles.css">
+    <Message Text="Starting tailwindcss. This may take a while..." />
+		<Message Importance="high" Text="npx --no-install tailwindcss -i styles.css -o $(MSBuildProjectDirectory)/wwwroot/css/styles.css -m" />
+    
+    <Exec Command="npx --no-install tailwindcss -i styles.css -o $(MSBuildProjectDirectory)/wwwroot/css/styles.css -m"
+          IgnoreExitCode="true"
+          EchoOff="true"
+          WorkingDirectory="$(MSBuildThisFileDirectory)"
+          EnvironmentVariables="NODE_ENV=production">
+      <Output TaskParameter="ExitCode" PropertyName="ExitCode" />
+    </Exec>
+
+    <Error Text="Error via build css" Condition="$(ExitCode) != 0" />
+  </Target>
+
+  <Target Name="PostStylesCssCompile" AfterTargets="Build">
+    <Message Importance="high" Text="Run this command if you are in the watch mode" />
+    <Message Importance="high" Text="cd $(MSBuildThisFileDirectory) &amp;&amp; npx --no-install tailwindcss -i styles.css -o $(MSBuildProjectDirectory)/wwwroot/css/styles.css -w" />
+  </Target>
+</Project>
